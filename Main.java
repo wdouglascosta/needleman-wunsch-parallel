@@ -29,6 +29,7 @@ public class Main {
     static List<Object> listDistinct = new ArrayList<Object>();
     static List<Score> scoreList = new ArrayList<Score>();
     static List<Float> successScores = new ArrayList<Float>();
+    private static final Object lock= new Object();  
     
     static HashMap<Integer, String> sequencesList = new HashMap<Integer, String>();
     
@@ -58,7 +59,7 @@ public class Main {
         Runnable task1 = new Runnable(){
             @Override
             public void run(){
-            	for(int a = 0; a < 20; a++) {
+            	for(int a = 0; a < 500; a++) {
             		computeMatrixInit(a, sequence1, sequence2, matchScore, mismatchScore, indelScore);
                 }  
             }
@@ -67,7 +68,7 @@ public class Main {
         Runnable task2 = new Runnable(){
             @Override
             public void run(){
-            	for(int a = 20; a < 40; a++) {
+            	for(int a = 500; a < 1500; a++) {
             		computeMatrixInit(a, sequence1, sequence2, matchScore, mismatchScore, indelScore);
                 }  
             }
@@ -76,7 +77,7 @@ public class Main {
         Runnable task3 = new Runnable(){
             @Override
             public void run(){
-            	for(int a = 40; a < 60; a++) {
+            	for(int a = 1500; a < 3000; a++) {
             		computeMatrixInit(a, sequence1, sequence2, matchScore, mismatchScore, indelScore);
                 }  
             }
@@ -85,79 +86,46 @@ public class Main {
         Runnable task4 = new Runnable(){
             @Override
             public void run(){
-            	for(int a = 60; a < 70; a++) {
+            	for(int a = 3000; a < sequencesList.size(); a++) {
             		computeMatrixInit(a, sequence1, sequence2, matchScore, mismatchScore, indelScore);
                 }  
             }
         };
         
-        Runnable task5 = new Runnable(){
-            @Override
-            public void run(){
-            	for(int a = 70; a < 80; a++) {
-            		computeMatrixInit(a, sequence1, sequence2, matchScore, mismatchScore, indelScore);
-                }  
-            }
-        };
-        
-        Runnable task6 = new Runnable(){
-            @Override
-            public void run(){
-            	for(int a = 80; a < 100; a++) {
-            		computeMatrixInit(a, sequence1, sequence2, matchScore, mismatchScore, indelScore);
-                }  
-            }
-        };
         // Hizalama matrisinin hesaplanmasi
     		
 		Thread t1 = new Thread(task1);
 		Thread t2 = new Thread(task2);
 		Thread t3 = new Thread(task3);
 		Thread t4 = new Thread(task4);
-		Thread t5 = new Thread(task5);
-		Thread t6 = new Thread(task6);
 		
 		t1.start();
 		t2.start();
 		t3.start();
 		t4.start();
-		t5.start();
-		t6.start();
 		
-		tempList.sort(Comparator.comparing(Score::getScore).reversed());
+		t1.join();
+		t2.join();
+		t3.join();
+		t4.join();
 		
-		for(Score obj:tempList) {
+		scoreList.sort(Comparator.comparing(Score::getScore).reversed());
+		
+		 for(Score obj:scoreList) {
         	
         	if(counter < 20) {
         		System.out.println(counter + 1 + ". a: " + obj.getA() + " b: " + obj.getB() + " score: " + obj.getScore());
         	}
         	
         	counter++;
-        }
+         }
 		
 		 long endTime = System.currentTimeMillis();
 		 long estimatedTime = endTime - startTime; // Geçen süreyi milisaniye cinsinden elde ediyoruz
 		 double seconds = (double)estimatedTime / 1000; // saniyeye çevirmek için 1000'e bölüyoruz.
 		    
 		 System.out.println("Geçen süre: " + seconds + " ms");
-        
-        // En yüksek skor bilgisine göre sýralama iþlemi 
-        /*scoreList.sort(Comparator.comparing(Score::getScore).reversed());
-        
-        System.out.println("Max Scores:");
                 
-        // En iyi ilk 20 skorun listelenmesi
-        for(Score obj:scoreList) {
-        	
-        	if(counter < 20) {
-        		System.out.println(counter + 1 + ". a: " + obj.getA() + " b: " + obj.getB() + " score: " + obj.getScore());
-        	}
-        	
-        	counter++;
-        }
-        
-        System.out.println("#############################");*/
-        
 	} catch (Exception e) {
 		
 		System.out.println(e.getMessage());
@@ -165,9 +133,9 @@ public class Main {
 	}
   }
   
-  public static void computeMatrixInit(int a, String sequence1, String sequence2, float matchScore, float mismatchScore, float indelScore) {
+  public static synchronized List<Score> computeMatrixInit(int a, String sequence1, String sequence2, float matchScore, float mismatchScore, float indelScore) {
 	  	      	
-      	for(int b = a+1; b < 100; b++) {
+      	for(int b = a+1; b < sequencesList.size(); b++) {
       		
       		  sequence1 = sequencesList.get(a);
       		  sequence2 = sequencesList.get(b);
@@ -181,8 +149,14 @@ public class Main {
 	      	  scoreObj.setA(a);
 	      	  scoreObj.setB(b);
 	      	  scoreObj.setScore(score);
-	      	  scoreList.add(scoreObj);
-	      	  System.out.println("Thread Name: " + Thread.currentThread().getName() + " a: " + scoreObj.getA() + " b: "+ scoreObj.getB() + " score: " + scoreObj.getScore());
+	      	  
+	      	  synchronized(lock){
+	      		scoreList.add(scoreObj);
+	      	  }
+	      	 
+	      	  //System.out.println("Thread Name: " + Thread.currentThread().getName() + " a: " + scoreObj.getA() + " b: "+ scoreObj.getB() + " score: " + scoreObj.getScore());
   		}
+      	
+      	 return scoreList;
       }
 }
